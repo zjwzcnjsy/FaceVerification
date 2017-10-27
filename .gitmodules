@@ -1,0 +1,6 @@
+[submodule "MTCNN_face_detection_alignment"]
+	path = MTCNN_face_detection_alignment
+	url = git@github.com:zjwzcnjsy/MTCNN_face_detection_alignment.git
+[submodule "toolbox"]
+	path = toolbox
+	url = git@github.com:zjwzcnjsy/toolbox.git

@@ -1,32 +1,35 @@
-folder = 'E:\datasets\MegaFace\megafacedata\FlickrFinal2';
+folder = 'E:\res\face_recognition\images\lfw\lfw_original';
 addpath('..');
 image_list = get_image_list_in_folder(folder);
-target_folder = 'E:\datasets\MegaFace\megafacedata\FlickrFinal2-align';
+target_folder = 'E:\res\face_recognition\images\lfw\lfw_original-align-wuxiang_256x256';
 if exist(target_folder, 'dir')==0
     mkdir(target_folder);
 end;
+caffe_path = 'D:\bin\libs\caffe\caffe-windows_20160926\Build\x64\Release2\matcaffe';
+addpath(genpath(caffe_path));
 
-pdollar_toolbox_path='D:/face project/pdollar-toolbox';
+pdollar_toolbox_path='../toolbox';
 addpath(genpath(pdollar_toolbox_path));
 
-MTCNN_path = 'D:\face project\MTCNN_face_detection_alignment\code\codes\MTCNNv2';
-caffe_model_path=[MTCNN_path , '/model'];
+MTCNN_path = '../MTCNN_face_detection_alignment/code/codes/MTCNNv2';
 addpath(genpath(MTCNN_path));
+caffe_model_path=[MTCNN_path , '/model'];
 
 coord5points = [30.2946, 65.5318, 48.0252, 33.5493, 62.7299; ...
                 51.6963, 51.5014, 71.7366, 92.3655, 92.2041];
 imgSize = [112, 96];
-align_method = 'yandong';% wuxiang or yandong
+align_method = 'wuxiang_256x256';% wuxiang, wuxiang_256x256 or yandong
             
 %caffe.set_mode_cpu();
-gpu_id=1;
+gpu_id=0;
 caffe.set_mode_gpu();	
 caffe.set_device(gpu_id);
 caffe.reset_all();
 
 %three steps's threshold
-threshold=[0.6 0.7 0.7]
+threshold=[0.6 0.7 0.7];
 
+%设置最小人脸
 minsize = 100;
 
 %scale factor
@@ -48,6 +51,7 @@ LNet=caffe.Net(prototxt_dir,model_dir,'test');
 faces=cell(0);	
 
 for image_id = 1:length(image_list);
+    disp(image_list{image_id});
     [file_folder, file_name, file_ext] = fileparts(image_list{image_id});
     target_filename = strrep(image_list{image_id},folder, target_folder);
     if exist(target_filename, 'file')
@@ -65,7 +69,7 @@ for image_id = 1:length(image_list);
         mkdir(file_folder);
     end;
     disp([num2str(image_id) '/' num2str(length(image_list)) ' ' target_filename]);
-    [boundingboxes points]=detect_face(img,min([minsize size(img,1) size(img,2)]),PNet,RNet,ONet,LNet,threshold,false,factor);
+    [boundingboxes, points]=detect_face(img,min([minsize size(img,1) size(img,2)]),PNet,RNet,ONet,LNet,threshold,false,factor);
     if isempty(boundingboxes)
         continue;
     end;
@@ -81,6 +85,9 @@ for image_id = 1:length(image_list);
     facial5points = double(reshape(points(:,default_face),[5 2])');
     if strcmp(align_method, 'wuxiang') > 0
         [res, eyec2, cropImg, resize_scale] = align_face_WX(img,facial5points',144,48,48);
+        cropImg = uint8(cropImg);
+    elseif  strcmp(align_method, 'wuxiang_256x256') > 0
+        [res, eyec2, cropImg, resize_scale] = align_face_WX_256x256(img,facial5points',256,96,80);
         cropImg = uint8(cropImg);
     else
         Tfm =  cp2tform(facial5points', coord5points', 'similarity');
