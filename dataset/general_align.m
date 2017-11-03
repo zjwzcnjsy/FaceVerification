@@ -1,11 +1,15 @@
-folder = 'E:\res\face_recognition\images\lfw\lfw_original';
+folder = 'D:\jsy\res\face\images\lfw\lfw_original';
 addpath('..');
 image_list = get_image_list_in_folder(folder);
-target_folder = 'E:\res\face_recognition\images\lfw\lfw_original-align-wuxiang_256x256';
+target_folder = 'D:\jsy\res\face\images\lfw\mtcnn_norm\lfw_original-align-wuxiang_256x256';
+target_faceinfo_folder = 'D:\jsy\res\face\images\lfw\mtcnn_norm\lfw_original-mtcnn-result';
 if exist(target_folder, 'dir')==0
     mkdir(target_folder);
 end;
-caffe_path = 'D:\bin\libs\caffe\caffe-windows_20160926\Build\x64\Release2\matcaffe';
+if exist(target_faceinfo_folder, 'dir')==0
+    mkdir(target_faceinfo_folder);
+end;
+caffe_path = 'D:\jsy\bin\caffe\caffe\Build\x64\Release2\matcaffe';
 addpath(genpath(caffe_path));
 
 pdollar_toolbox_path='../toolbox';
@@ -18,7 +22,7 @@ caffe_model_path=[MTCNN_path , '/model'];
 coord5points = [30.2946, 65.5318, 48.0252, 33.5493, 62.7299; ...
                 51.6963, 51.5014, 71.7366, 92.3655, 92.2041];
 imgSize = [112, 96];
-align_method = 'wuxiang_256x256';% wuxiang, wuxiang_256x256 or yandong
+align_method = 'wuxiang_256x256';% wuxiang, wuxiang2, wuxiang_256x256 or yandong
             
 %caffe.set_mode_cpu();
 gpu_id=0;
@@ -29,7 +33,7 @@ caffe.reset_all();
 %three steps's threshold
 threshold=[0.6 0.7 0.7];
 
-%设置最小人脸
+%最小人脸
 minsize = 100;
 
 %scale factor
@@ -51,9 +55,9 @@ LNet=caffe.Net(prototxt_dir,model_dir,'test');
 faces=cell(0);	
 
 for image_id = 1:length(image_list);
-    disp(image_list{image_id});
     [file_folder, file_name, file_ext] = fileparts(image_list{image_id});
     target_filename = strrep(image_list{image_id},folder, target_folder);
+    target_faceinfo_filename = strrep(image_list{image_id},folder, target_faceinfo_folder);
     if exist(target_filename, 'file')
         continue;
     end;
@@ -69,10 +73,35 @@ for image_id = 1:length(image_list);
         mkdir(file_folder);
     end;
     disp([num2str(image_id) '/' num2str(length(image_list)) ' ' target_filename]);
-    [boundingboxes, points]=detect_face(img,min([minsize size(img,1) size(img,2)]),PNet,RNet,ONet,LNet,threshold,false,factor);
+    target_faceinfo_filename = [target_faceinfo_filename '.txt'];
+    if exist(target_faceinfo_filename)
+        boundingboxes = textread(target_faceinfo_filename, '%f');
+        if size(boundingboxes,1) > 0 && mod(size(boundingboxes,1), 15) == 0
+            boundingboxes = reshape(boundingboxes, 15, [])';
+            points = boundingboxes(:, 6:end)';
+            boundingboxes = boundingboxes(:, 1:5);
+        else
+            [boundingboxes, points]=detect_face(img,min([minsize size(img,1) size(img,2)]),PNet,RNet,ONet,LNet,threshold,false,factor);
+            fd = fopen(target_faceinfo_filename, 'w');
+            for bb=1:size(boundingboxes,1)
+                fprintf(fd, '%f %f %f %f %f ', boundingboxes(bb,:));
+                fprintf(fd, '%f %f %f %f %f %f %f %f %f %f\n', points(:,bb)');
+            end
+            fclose(fd);
+        end
+    else
+        [boundingboxes, points]=detect_face(img,min([minsize size(img,1) size(img,2)]),PNet,RNet,ONet,LNet,threshold,false,factor);
+        fd = fopen(target_faceinfo_filename, 'w');
+        for bb=1:size(boundingboxes,1)
+            fprintf(fd, '%f %f %f %f %f ', boundingboxes(bb,:));
+            fprintf(fd, '%f %f %f %f %f %f %f %f %f %f\n', points(:,bb)');
+        end
+        fclose(fd);
+    end
     if isempty(boundingboxes)
         continue;
     end;
+    
     default_face = 1;
     if size(boundingboxes,1) > 1
         for bb=2:size(boundingboxes,1)
@@ -85,6 +114,9 @@ for image_id = 1:length(image_list);
     facial5points = double(reshape(points(:,default_face),[5 2])');
     if strcmp(align_method, 'wuxiang') > 0
         [res, eyec2, cropImg, resize_scale] = align_face_WX(img,facial5points',144,48,48);
+        cropImg = uint8(cropImg);
+    elseif  strcmp(align_method, 'wuxiang2') > 0
+        [res, eyec2, cropImg, resize_scale] = align_face_WX2(img,facial5points',128,48,40);
         cropImg = uint8(cropImg);
     elseif  strcmp(align_method, 'wuxiang_256x256') > 0
         [res, eyec2, cropImg, resize_scale] = align_face_WX_256x256(img,facial5points',256,96,80);
