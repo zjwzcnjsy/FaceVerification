@@ -1,8 +1,8 @@
-folder = 'D:\jsy\res\face\images\lfw\lfw_original';
+folder = 'H:\images\VGGFace2\train';
 addpath('..');
 image_list = get_image_list_in_folder(folder);
-target_folder = 'D:\jsy\res\face\images\lfw\mtcnn_norm\lfw_original-align-wuxiang_256x256';
-target_faceinfo_folder = 'D:\jsy\res\face\images\lfw\mtcnn_norm\lfw_original-mtcnn-result';
+target_folder = 'F:\jsy\recognition\VGGFace2\train-align-wuxiang2';
+target_faceinfo_folder = 'F:\jsy\recognition\VGGFace2\train-mtcnn-result';
 if exist(target_folder, 'dir')==0
     mkdir(target_folder);
 end;
@@ -22,7 +22,7 @@ caffe_model_path=[MTCNN_path , '/model'];
 coord5points = [30.2946, 65.5318, 48.0252, 33.5493, 62.7299; ...
                 51.6963, 51.5014, 71.7366, 92.3655, 92.2041];
 imgSize = [112, 96];
-align_method = 'wuxiang_256x256';% wuxiang, wuxiang2, wuxiang_256x256 or yandong
+align_method = 'wuxiang2';% wuxiang, wuxiang2, wuxiang_256x256 or yandong
             
 %caffe.set_mode_cpu();
 gpu_id=0;
@@ -72,6 +72,11 @@ for image_id = 1:length(image_list);
     if exist(file_folder,'dir')==0
         mkdir(file_folder);
     end;
+    file_folder = strrep(file_folder,target_folder, target_faceinfo_folder);
+    if exist(file_folder,'dir')==0
+        mkdir(file_folder);
+    end;
+    
     disp([num2str(image_id) '/' num2str(length(image_list)) ' ' target_filename]);
     target_faceinfo_filename = [target_faceinfo_filename '.txt'];
     if exist(target_faceinfo_filename)
