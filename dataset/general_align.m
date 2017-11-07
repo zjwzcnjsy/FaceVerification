@@ -1,8 +1,16 @@
-folder = 'H:\images\VGGFace2\train';
+folder = 'H:\images\VGGFace2\test';
 addpath('..');
-image_list = get_image_list_in_folder(folder);
-target_folder = 'F:\jsy\recognition\VGGFace2\train-align-wuxiang2';
-target_faceinfo_folder = 'F:\jsy\recognition\VGGFace2\train-mtcnn-result';
+target_folder = 'F:\jsy\recognition\VGGFace2';
+
+if exist([target_folder '\' 'test_image_list.mat'], 'file') == 0
+    image_list = get_image_list_in_folder(folder);
+    save([target_folder '\' 'test_image_list.mat'], 'image_list')
+else
+    image_list = load([target_folder '\' 'test_image_list.mat']);
+    image_list = image_list.image_list;
+end
+target_folder = 'F:\jsy\recognition\VGGFace2\test-align-wuxiang2';
+target_faceinfo_folder = 'F:\jsy\recognition\VGGFace2\test-mtcnn-result';
 if exist(target_folder, 'dir')==0
     mkdir(target_folder);
 end;
@@ -58,6 +66,7 @@ for image_id = 1:length(image_list);
     [file_folder, file_name, file_ext] = fileparts(image_list{image_id});
     target_filename = strrep(image_list{image_id},folder, target_folder);
     target_faceinfo_filename = strrep(image_list{image_id},folder, target_faceinfo_folder);
+    target_faceinfo_filename = [target_faceinfo_filename '.txt'];
     if exist(target_filename, 'file')
         continue;
     end;
@@ -78,8 +87,7 @@ for image_id = 1:length(image_list);
     end;
     
     disp([num2str(image_id) '/' num2str(length(image_list)) ' ' target_filename]);
-    target_faceinfo_filename = [target_faceinfo_filename '.txt'];
-    if exist(target_faceinfo_filename)
+    if exist(target_faceinfo_filename, 'file')
         boundingboxes = textread(target_faceinfo_filename, '%f');
         if size(boundingboxes,1) > 0 && mod(size(boundingboxes,1), 15) == 0
             boundingboxes = reshape(boundingboxes, 15, [])';
